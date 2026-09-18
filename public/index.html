@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🐹 倉鼠小窩</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FDFAF5; --card-bg: #FFFFFF; --primary: #C4967A; --primary-dark: #A67B5B;
+      --accent: #E8C49A; --text: #4A3728; --sub: #9C8B7E; --border: #EDE4D9;
+      --green: #7BAE7F; --shadow: 0 2px 16px rgba(74,55,40,0.08);
+      --shadow-lg: 0 8px 32px rgba(74,55,40,0.12);
+      --radius: 20px; --radius-sm: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    body.no-scroll { overflow: hidden; }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(253,250,245,0.92); backdrop-filter: blur(12px);
+      padding: 14px 20px; display: flex; align-items: center;
+      border-bottom: 1px solid var(--border); gap: 12px;
+    }
+    .topbar-back {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--card-bg); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; cursor: pointer; flex-shrink: 0; transition: transform 0.15s;
+    }
+    .topbar-back:active { transform: scale(0.92); }
+    .topbar-title { font-size: 17px; font-weight: 700; flex: 1; }
+    .topbar-home {
+      font-size: 13px; font-weight: 700; color: var(--primary);
+      padding: 6px 14px; border-radius: 20px;
+      background: rgba(196,150,122,0.1); cursor: pointer; flex-shrink: 0;
+    }
+
+    /* ── Home ── */
+    .page { display: none; flex-direction: column; min-height: 100vh; }
+    .page.active { display: flex; }
+    .home-hero {
+      background: linear-gradient(160deg,#FFF5EB 0%,#FDF0E4 50%,#F5E6D3 100%);
+      padding: 48px 24px 36px; text-align: center; position: relative; overflow: hidden;
+    }
+    .home-hero::before {
+      content: ''; position: absolute; top: -30px; right: -30px;
+      width: 200px; height: 200px; background: radial-gradient(circle,rgba(196,150,122,0.15) 0%,transparent 70%);
+      border-radius: 50%;
+    }
+    .home-logo { font-size: 56px; margin-bottom: 12px; display: block; }
+    .home-name { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .home-intro { font-size: 14px; color: var(--sub); line-height: 1.6; }
+    .home-cats { padding: 24px 20px; flex: 1; }
+    .home-cats-title { font-size: 13px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 2px; text-align: center; margin-bottom: 20px; }
+    .cat-card {
+      display: flex; align-items: center; gap: 20px;
+      background: var(--card-bg); border-radius: var(--radius); padding: 28px 24px; margin-bottom: 16px;
+      box-shadow: var(--shadow); cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none; color: var(--text);
+    }
+    .cat-card:active { transform: scale(0.97); box-shadow: var(--shadow-lg); }
+    .cat-icon { font-size: 52px; flex-shrink: 0; }
+    .cat-info { flex: 1; }
+    .cat-name { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .cat-desc { font-size: 13px; color: var(--sub); line-height: 1.5; }
+    .cat-count { background: var(--accent); color: var(--primary-dark); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; flex-shrink: 0; }
+    .cat-arrow { font-size: 22px; color: var(--sub); flex-shrink: 0; }
+    .home-footer { padding: 20px 24px; text-align: center; border-top: 1px solid var(--border); }
+    .home-footer p { font-size: 12px; color: var(--sub); }
+
+    /* ── List ── */
+    .product-grid { padding: 16px 16px 100px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .product-card {
+      background: var(--card-bg); border-radius: var(--radius);
+      overflow: hidden; box-shadow: var(--shadow); cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .product-card:active { transform: scale(0.97); }
+    .product-img {
+      width: 100%; aspect-ratio: 1; background: #F0E8E0;
+      display: flex; align-items: center; justify-content: center; font-size: 48px;
+      position: relative; overflow: hidden;
+    }
+    .product-img img { width: 100%; height: 100%; object-fit: cover; }
+    .product-badge-tag {
+      position: absolute; top: 8px; left: 8px;
+      background: var(--green); color: #fff; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 8px;
+    }
+    .product-badge-tag.sold { background: #555; }
+    .product-badge-tag.pending { background: #D4972A; }
+    .product-info { padding: 12px 14px 14px; }
+    .product-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; line-height: 1.4; }
+    .product-price { font-size: 17px; font-weight: 700; color: var(--primary); }
+    .btn-buy {
+      width: 100%; margin-top: 10px; padding: 8px 0;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-buy.open { background: var(--primary); color: #fff; }
+    .btn-buy.open:active { background: var(--primary-dark); }
+    .btn-buy.sold-out { background: #E8E8E8; color: #999; cursor: default; }
+    .btn-buy.pending { background: #F5E6C8; color: #A07820; cursor: default; }
+    .loading-grid { grid-column: 1/-1; text-align: center; padding: 40px; color: var(--sub); font-size: 14px; }
+    .empty-state { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--sub); }
+    .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; }
+
+    /* ── Detail ── */
+    .detail-page { display: none; }
+    .detail-page.active { display: flex; flex-direction: column; min-height: 100vh; }
+    .detail-media {
+      width: 100%; aspect-ratio: 4/3; background: #F0E8E0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 72px; position: relative; overflow: hidden;
+    }
+    .detail-media img { width: 100%; height: 100%; object-fit: cover; }
+    .detail-video-btn {
+      position: absolute; bottom: 12px; right: 12px;
+      background: rgba(0,0,0,0.6); color: #fff;
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+    .detail-video-btn:active { background: rgba(0,0,0,0.8); }
+    .detail-badge {
+      position: absolute; top: 12px; left: 12px;
+      padding: 4px 12px; border-radius: 10px; font-size: 12px; font-weight: 700;
+    }
+    .detail-badge.onsale { background: var(--green); color: #fff; }
+    .detail-badge.sold { background: #555; color: #fff; }
+    .detail-badge.pending { background: #D4972A; color: #fff; }
+    .detail-body { padding: 24px 20px 120px; flex: 1; }
+    .detail-name { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .detail-price { font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 20px; }
+    .detail-price small { font-size: 14px; font-weight: 400; color: var(--sub); }
+    .detail-desc {
+      background: var(--card-bg); border-radius: var(--radius-sm);
+      padding: 16px 18px; font-size: 15px; line-height: 1.8;
+      color: var(--text); box-shadow: var(--shadow);
+    }
+    .detail-desc-label { font-size: 12px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .detail-bottom {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(253,250,245,0.95); backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border); padding: 16px 20px;
+      display: flex; gap: 12px; align-items: center;
+      max-width: 480px; margin: 0 auto;
+    }
+    .detail-price-side { font-size: 22px; font-weight: 700; color: var(--primary); flex: 1; }
+
+    /* ── Checkout Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(74,55,40,0.5); backdrop-filter: blur(4px);
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-sheet {
+      background: var(--card-bg); border-radius: 24px 24px 0 0;
+      width: 100%; max-width: 480px; padding: 28px 24px 40px;
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-product { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .modal-thumb { width: 72px; height: 72px; border-radius: var(--radius-sm); object-fit: cover; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0; overflow: hidden; }
+    .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .modal-info { flex: 1; }
+    .modal-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .modal-price { font-size: 20px; font-weight: 700; color: var(--primary); }
+    .modal-section-title { font-size: 14px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .modal-bank { background: var(--bg); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 20px; }
+    .modal-bank p { font-size: 14px; line-height: 1.8; }
+    .modal-bank strong { color: var(--primary); }
+    .modal-note { background: #FFF9F0; border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 20px; }
+    .btn-pay { width: 100%; padding: 16px; border: none; border-radius: var(--radius); background: var(--primary); color: #fff; font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+    .btn-pay:active { background: var(--primary-dark); transform: scale(0.98); }
+    .btn-pay:disabled { background: #ccc; cursor: default; }
+    .modal-close { display: block; width: 100%; margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--sub); font-size: 15px; font-family: inherit; cursor: pointer; }
+
+    /* ── Video Modal ── */
+    .video-modal { display: none; position: fixed; inset: 0; z-index: 250; background: #000; align-items: center; justify-content: center; padding: 20px; }
+    .video-modal.show { display: flex; }
+    .video-modal video { width: 100%; max-height: 80vh; border-radius: var(--radius); }
+    .video-close { position: fixed; top: 20px; right: 20px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2); color: #fff; border: none; font-size: 20px; cursor: pointer; backdrop-filter: blur(4px); }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; z-index: 300; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .pay-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: #FFF3CD; border-bottom: 1px solid #FFD966; padding: 10px 20px; font-size: 13px; color: #856404; z-index: 150; text-align: center; }
+    .pay-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="pay-banner" id="payBanner">✅ 感謝您的訂購！請通知賣家確認匯款</div>
+
+<!-- ═══ HOME PAGE ═══ -->
+<div class="page active" id="homePage">
+  <div class="home-hero">
+    <span class="home-logo">🐹</span>
+    <h1 class="home-name">倉鼠小窩</h1>
+    <p class="home-intro">用心照顧每一隻小生命</p>
+  </div>
+  <div class="home-cats">
+    <p class="home-cats-title">選擇分類</p>
+    <div class="cat-card" onclick="goCategory('hamster','🐹 鼠寶貝')">
+      <span class="cat-icon">🐹</span>
+      <div class="cat-info">
+        <div class="cat-name">🐹 鼠寶貝</div>
+        <div class="cat-desc">金絲熊、三線侏儒、老公公<br>每一隻都是獨一無二的家人</div>
+      </div>
+      <span class="cat-count" id="hamsterCount">—</span>
+      <span class="cat-arrow">›</span>
+    </div>
+    <div class="cat-card" onclick="goCategory('goods','🏠 周邊用品')">
+      <span class="cat-icon">🏠</span>
+      <div class="cat-info">
+        <div class="cat-name">🏠 周邊用品</div>
+        <div class="cat-desc">鼠籠、跑輪、飼料禮盒<br>給鼠寶貝最舒適的家</div>
+      </div>
+      <span class="cat-count" id="goodsCount">—</span>
+      <span class="cat-arrow">›</span>
+    </div>
+  </div>
+  <div class="home-footer"><p>🐹 倉鼠小窩 · 謝謝您的支持</p></div>
+</div>
+
+<!-- ═══ LIST PAGE ═══ -->
+<div class="page" id="listPage">
+  <div class="topbar">
+    <div class="topbar-back" onclick="goHome()">←</div>
+    <div class="topbar-title" id="listTitle">商品列表</div>
+    <div class="topbar-home" onclick="goHome()">首頁</div>
+  </div>
+  <div class="product-grid" id="productGrid"><div class="loading-grid">載入中…</div></div>
+</div>
+
+<!-- ═══ DETAIL PAGE ═══ -->
+<div class="detail-page" id="detailPage">
+  <div class="topbar">
+    <div class="topbar-back" id="detailBack">←</div>
+    <div class="topbar-title" id="detailTitle">商品詳情</div>
+  </div>
+  <div class="detail-media" id="detailMedia"></div>
+  <div class="detail-body">
+    <div class="detail-name" id="detailName"></div>
+    <div class="detail-price" id="detailPrice"></div>
+    <div class="detail-desc" id="detailDesc">
+      <div class="detail-desc-label">商品介紹</div>
+      <div id="detailDescText"></div>
+    </div>
+  </div>
+  <div class="detail-bottom">
+    <div class="detail-price-side" id="detailPriceSide"></div>
+    <button class="btn-buy open" id="detailBuyBtn" style="width:auto;padding:12px 28px;">選購</button>
+  </div>
+</div>
+
+<!-- ═══ CHECKOUT MODAL ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-product" id="modalProduct"></div>
+    <div class="modal-section-title">匯款資訊</div>
+    <div class="modal-bank" id="modalBank"><p>載入中…</p></div>
+    <div class="modal-note">⚠️ 匯款後請通知賣家，確認後商品將設為「已完售」。感謝您的購買！</div>
+    <button class="btn-pay" id="btnPay" onclick="confirmPay()">✅ 我已完成匯款</button>
+    <button class="modal-close" onclick="closeModal()">取消</button>
+  </div>
+</div>
+
+<!-- ═══ VIDEO MODAL ═══ -->
+<div class="video-modal" id="videoModal" onclick="if(event.target===document.getElementById('videoModal'))closeVideo()">
+  <button class="video-close" onclick="closeVideo()">✕</button>
+  <video id="detailVideo" controls playsinline></video>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 頁面控制 ───────────────────────────────────────────
+function goHome() {
+  document.getElementById('homePage').classList.add('active');
+  document.getElementById('listPage').classList.remove('active');
+  document.getElementById('detailPage').classList.remove('active');
+  document.body.classList.remove('no-scroll');
+  loadCounts();
+}
+function goCategory(cat, title) {
+  currentCat = cat;
+  document.getElementById('homePage').classList.remove('active');
+  document.getElementById('listPage').classList.add('active');
+  document.getElementById('detailPage').classList.remove('active');
+  document.getElementById('listTitle').textContent = title;
+  document.getElementById('productGrid').innerHTML = '<div class="loading-grid">載入中…</div>';
+  loadProducts(cat);
+}
+function goDetail(id) {
+  currentProductId = id;
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('homePage').classList.remove('active');
+  document.getElementById('listPage').classList.remove('active');
+  document.getElementById('detailPage').classList.add('active');
+
+  const isSold   = p.status === 2;
+  const isPending = p.status === 1;
+  const badgeCls = isSold ? 'sold' : isPending ? 'pending' : 'onsale';
+  const badgeTxt = isSold ? '已完售' : isPending ? '待確認' : '';
+
+  const media = document.getElementById('detailMedia');
+  if (p.image) {
+    const hasVideo = !!p.video;
+    media.innerHTML = `<img src="${p.image}" />` +
+      (badgeTxt ? `<div class="detail-badge ${badgeCls}">${badgeTxt}</div>` : '') +
+      (hasVideo ? `<div class="detail-video-btn" onclick="showVideo('${p.id}')">▶ 播放影片</div>` : '');
+  } else {
+    media.innerHTML = `<span style="font-size:72px">${p.category==='hamster'?'🐹':'🏠'}</span>` +
+      (badgeTxt ? `<div class="detail-badge ${badgeCls}">${badgeTxt}</div>` : '');
+  }
+
+  document.getElementById('detailName').textContent = p.name;
+  document.getElementById('detailPrice').innerHTML = `NT$ ${p.price.toLocaleString()}<small> 元</small>`;
+  document.getElementById('detailPriceSide').textContent = 'NT$ ' + p.price.toLocaleString();
+
+  const descText = p.description ? `<p>${p.description.replace(/\n/g,'</p><p>')}</p>` : '<p style="color:var(--sub)">尚無詳細介紹</p>';
+  document.getElementById('detailDescText').innerHTML = descText;
+
+  const buyBtn = document.getElementById('detailBuyBtn');
+  if (isSold) {
+    buyBtn.className = 'btn-buy sold-out'; buyBtn.textContent = 'SOLD OUT'; buyBtn.disabled = true;
+  } else if (isPending) {
+    buyBtn.className = 'btn-buy pending'; buyBtn.textContent = '待確認'; buyBtn.disabled = true;
+  } else {
+    buyBtn.className = 'btn-buy open'; buyBtn.textContent = '選購'; buyBtn.disabled = false;
+  }
+}
+function goBackFromDetail() {
+  if (currentCat) {
+    document.getElementById('detailPage').classList.remove('active');
+    document.getElementById('listPage').classList.add('active');
+  } else {
+    goHome();
+  }
+}
+document.getElementById('detailBack').addEventListener('click', goBackFromDetail);
+
+// ── 載入 ───────────────────────────────────────────────
+let products = [];
+let currentCat = '';
+let currentProductId = null;
+
+async function loadCounts() {
+  try {
+    const r = await fetch('/api/products');
+    if (!r.ok) return;
+    const ps = await r.json();
+    document.getElementById('hamsterCount').textContent = ps.filter(p=>p.category==='hamster').length + ' 件';
+    document.getElementById('goodsCount').textContent = ps.filter(p=>p.category==='goods').length + ' 件';
+  } catch(e) {}
+}
+
+async function loadProducts(cat) {
+  try {
+    const r = await fetch('/api/products');
+    if (!r.ok) throw new Error();
+    products = await r.json();
+    const ps = products.filter(p => p.category === cat)
+      .sort((a,b) => (b.sort_order||0)-(a.sort_order||0) || a.created_at.localeCompare(b.created_at));
+    const grid = document.getElementById('productGrid');
+    if (!ps.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🐹</div><p>目前沒有商品</p></div>';
+      return;
+    }
+    grid.innerHTML = ps.map(p => {
+      const isSold   = p.status === 2;
+      const isPending = p.status === 1;
+      const badge = isSold ? '<span class="product-badge-tag sold">已完售</span>' :
+                    isPending ? '<span class="product-badge-tag pending">待確認</span>' : '';
+      const btnCls = isSold ? 'sold-out' : isPending ? 'pending' : 'open';
+      const btnTxt = isSold ? 'SOLD OUT' : isPending ? '待確認' : '選購';
+      const img = p.image ? `<img src="${p.image}" alt="${p.name}" />` : `<span style="font-size:48px">${cat==='hamster'?'🐹':'🏠'}</span>`;
+      return `<div class="product-card" onclick="goDetail('${p.id}')">
+        <div class="product-img">${img}${badge}</div>
+        <div class="product-info">
+          <div class="product-name">${p.name}</div>
+          <div class="product-price">NT$ ${p.price.toLocaleString()}</div>
+          <button class="btn-buy ${btnCls}" ${isSold||isPending?'disabled':''} onclick="event.stopPropagation();${isSold||isPending?'':`openPay('${p.id}')`}">${btnTxt}</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('productGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>載入失敗</p></div>';
+  }
+}
+
+// ── 結帳 ───────────────────────────────────────────────
+async function openPay(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  currentProductId = id;
+  try {
+    const shop = await fetch('/api/shop').then(r => r.json()).catch(() => ({}));
+    const imgHtml = p.image
+      ? `<div class="modal-thumb"><img src="${p.image}" /></div>`
+      : `<div class="modal-thumb">${p.category==='hamster'?'🐹':'🏠'}</div>`;
+    document.getElementById('modalProduct').innerHTML = imgHtml + `
+      <div class="modal-info"><div class="modal-name">${p.name}</div><div class="modal-price">NT$ ${p.price.toLocaleString()}</div></div>`;
+    const bankHtml = shop.bank_name && shop.account
+      ? `<p>銀行：<strong>${shop.bank_name}</strong></p><p>帳號：<strong>${shop.account}</strong></p><p>金額：<strong>NT$ ${p.price.toLocaleString()}</strong></p>`
+      : `<p>尚未設定匯款資訊，請聯絡賣家</p>`;
+    document.getElementById('modalBank').innerHTML = bankHtml;
+    document.getElementById('modalOverlay').classList.add('show');
+    document.body.classList.add('no-scroll');
+    document.getElementById('btnPay').disabled = false;
+    document.getElementById('btnPay').textContent = '✅ 我已完成匯款';
+  } catch(e) { toast('載入失敗'); }
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.body.classList.remove('no-scroll');
+}
+
+async function confirmPay() {
+  if (!currentProductId) return;
+  const btn = document.getElementById('btnPay');
+  btn.disabled = true; btn.textContent = '處理中…';
+  try {
+    const r = await fetch('/api/products/' + currentProductId + '/status', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 1 })
+    });
+    if (r.ok) {
+      closeModal();
+      toast('✅ 已通知賣家，請等待確認！');
+      document.getElementById('payBanner').classList.add('show');
+      setTimeout(() => document.getElementById('payBanner').classList.remove('show'), 8000);
+      // 更新列表中的狀態
+      const p = products.find(x => x.id === currentProductId);
+      if (p) p.status = 1;
+      // 重新渲染當前視圖
+      const detailEl = document.getElementById('detailPage');
+      if (detailEl.classList.contains('active')) goDetail(currentProductId);
+    } else { throw new Error(); }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '✅ 我已完成匯款';
+    toast('提交失敗，請再試一次');
+  }
+}
+
+// ── 影片 ───────────────────────────────────────────────
+function showVideo(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || !p.video) return;
+  const v = document.getElementById('detailVideo');
+  v.src = p.video;
+  document.getElementById('videoModal').classList.add('show');
+  v.play();
+}
+function closeVideo() {
+  const v = document.getElementById('detailVideo');
+  v.pause(); v.src = '';
+  document.getElementById('videoModal').classList.remove('show');
+}
+
+// ── Toast ──────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Detail buy button ──────────────────────────────────
+document.getElementById('detailBuyBtn').addEventListener('click', function() {
+  if (this.disabled) return;
+  openPay(currentProductId);
+});
+
+// ── 啟動 ──────────────────────────────────────────────
+loadCounts();
+</script>
+</body>
+</html>

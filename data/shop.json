@@ -1,0 +1,100 @@
+{
+  "products": [
+    {
+      "id": "262546e2-90b7-4d98-bdb2-a0ff22baf839",
+      "category": "hamster",
+      "name": "金絲熊寶寶",
+      "description": "圓滾滾的金絲熊，個性溫馴親人，適合第一次養鼠的新手。",
+      "price": 680,
+      "image": "",
+      "video": "",
+      "sort_order": 1,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 14:10:55",
+      "status": 0
+    },
+    {
+      "id": "fafeac9f-227b-4842-84c5-a5791b89609c",
+      "category": "hamster",
+      "name": "三線侏儒倉鼠",
+      "description": "體型迷你的三線寶貝，活潑好動，喜歡在跑輪上轉圈圈。",
+      "price": 520,
+      "image": "",
+      "video": "",
+      "sort_order": 2,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 14:09:51",
+      "status": 0
+    },
+    {
+      "id": "412ee36d-25f1-4a65-b955-248b37f16654",
+      "category": "hamster",
+      "name": "老公公倉鼠",
+      "description": "超迷你、眼睛亮晶晶的老公公，動作敏捷又可愛十足。",
+      "price": 750,
+      "image": "",
+      "video": "",
+      "sort_order": 3,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 13:43:29",
+      "status": 0
+    },
+    {
+      "id": "28d16e72-6f88-4051-9dd0-a9b05a16cd13",
+      "category": "goods",
+      "name": "木質雙層鼠籠",
+      "description": "通風好清理的木質雙層籠，給寶貝舒適又安全的家。",
+      "price": 890,
+      "image": "",
+      "video": "",
+      "sort_order": 4,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 13:43:29",
+      "status": 0
+    },
+    {
+      "id": "ccc51501-4cd3-49c0-963f-96f0ce2f25c2",
+      "category": "goods",
+      "name": "靜音跑輪",
+      "description": "超靜音軸承設計，半夜也不吵，讓寶貝盡情運動。",
+      "price": 260,
+      "image": "",
+      "video": "",
+      "sort_order": 5,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 13:43:28",
+      "status": 0
+    },
+    {
+      "id": "103991d9-a305-4e37-8436-e7d456194ddd",
+      "category": "goods",
+      "name": "綜合飼料禮盒",
+      "description": "營養均衡的綜合飼料+曬乾點心，滿滿一盒愛心。",
+      "price": 320,
+      "image": "",
+      "video": "",
+      "sort_order": 6,
+      "created_at": "2026-09-18 12:36:20",
+      "updated_at": "2026-09-18 14:09:50",
+      "status": 0
+    },
+    {
+      "id": "38f5e80a-bd74-43a5-8de5-bdcd19910259",
+      "category": "hamster",
+      "name": "dfdfd",
+      "description": "",
+      "price": 433333,
+      "sort_order": 0,
+      "image": "",
+      "video": "",
+      "created_at": "2026-09-18 12:49:14",
+      "updated_at": "2026-09-18 13:43:37",
+      "status": 0
+    }
+  ],
+  "shop": {
+    "shop_name": "倉鼠小窩",
+    "logo_emoji": "🐹",
+    "intro": "用心照顧每一隻小生命"
+  }
+}
