@@ -5,8 +5,34 @@ const path    = require("path");
 const fs      = require("fs");
 const { Pool } = require("pg");
 
-const UPLOAD_DIR = path.join(__dirname, "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// ── Neon Object Storage (S3) ─────────────────────────
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const S3 = new S3Client({
+  region: process.env.AWS_REGION || "us-east-2",
+  endpoint: process.env.AWS_ENDPOINT_URL_S3,
+  forcePathStyle: true,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+const BUCKET = process.env.S3_BUCKET || "hamster-uploads";
+const PUBLIC_BASE = (process.env.AWS_ENDPOINT_URL_S3 || "").replace(/\/$/, "");
+async function s3Upload(key, buffer, contentType) {
+  await S3.send(new PutObjectCommand({
+    Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType,
+  }));
+  return `${PUBLIC_BASE}/${BUCKET}/${key}`;
+}
+async function s3Delete(key) {
+  if (!key) return;
+  try { await S3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key })); } catch(e){}
+}
+function keyFromUrl(url) {
+  if (!url) return null;
+  try { return new URL(url).pathname.replace(/^\//, "").replace(new RegExp("^" + BUCKET + "/"), ""); }
+  catch(e) { return null; }
+}
 
 // ── Telegram 通知 ────────────────────────────────────
 const TELEGRAM_BOT_TOKEN = "7407012813:AAH3w5tYgtdvKJZvsT1R8AKulzme4Id9LvY";
@@ -92,12 +118,8 @@ async function initDB() {
 }
 
 // ── Multer 上傳設定 ───────────────────────────────────
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename:    (req, file, cb) => cb(null, Date.now() + '_' + file.originalname.replace(/[^\w.\-]/g, '_')),
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp|mp4|mov|avi|webm/;
@@ -118,7 +140,6 @@ function sseBroadcast(data) {
 // ── App ───────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: "10mb" }));
-app.use("/uploads", express.static(UPLOAD_DIR));
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   next();
@@ -215,32 +236,32 @@ app.delete("/api/products/:id", async (req, res) => {
     const r = await pool.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
     if (!r.rows.length) return err(res, 404, "Not found");
     const p = r.rows[0];
-    if (p.image) try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(p.image))); } catch(e){}
-    if (p.video) try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(p.video))); } catch(e){}
+    await s3Delete(keyFromUrl(p.image));
+    await s3Delete(keyFromUrl(p.video));
     await pool.query("DELETE FROM products WHERE id = $1", [req.params.id]);
     sseBroadcast({ type: "deleted", id: req.params.id });
     json(res, { ok: true });
   } catch(e) { err(res, 500, e.message); }
 });
 
-// ── Upload API ────────────────────────────────────────
+// ── Upload API (走 Neon Object Storage) ───────────────
 function doUpload(field) {
   return async (req, res) => {
     try {
       if (!req.file) return err(res, 400, "No file");
-      const url = `/uploads/${req.file.filename}`;
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const key = `${field}/${req.params.productId}/${Date.now()}${ext}`;
+
+      // 先刪舊檔（如果有）
+      const old = await pool.query(`SELECT ${field} FROM products WHERE id = $1`, [req.params.productId]);
+      if (old.rows[0] && old.rows[0][field]) await s3Delete(keyFromUrl(old.rows[0][field]));
+
+      const url = await s3Upload(key, req.file.buffer, req.file.mimetype);
       const r = await pool.query(
         `UPDATE products SET ${field} = $1 WHERE id = $2 RETURNING *`,
         [url, req.params.productId]
       );
-      if (!r.rows.length) {
-        try { fs.unlinkSync(req.file.path); } catch(e){}
-        return err(res, 404, "Product not found");
-      }
-      // 刪掉舊檔
-      const old = r.rows[0][field === 'image' ? 'video' : 'image']; // 抓另一個欄位不會用到
-      const oldRow = await pool.query(`SELECT ${field} FROM products WHERE id = $1`, [req.params.productId]);
-      // 這段保留簡單：暫不刪舊檔
+      if (!r.rows.length) return err(res, 404, "Product not found");
       sseBroadcast({ type: "updated", product: r.rows[0] });
       json(res, { ok: true, url, product: r.rows[0] });
     } catch(e) { err(res, 500, e.message); }
@@ -254,7 +275,7 @@ app.delete("/api/upload/image/:productId", async (req, res) => {
   try {
     const r = await pool.query("SELECT image FROM products WHERE id = $1", [req.params.productId]);
     if (!r.rows.length) return err(res, 404, "Not found");
-    if (r.rows[0].image) try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(r.rows[0].image))); } catch(e){}
+    await s3Delete(keyFromUrl(r.rows[0].image));
     await pool.query("UPDATE products SET image = NULL WHERE id = $1", [req.params.productId]);
     json(res, { ok: true });
   } catch(e) { err(res, 500, e.message); }
@@ -264,7 +285,7 @@ app.delete("/api/upload/video/:productId", async (req, res) => {
   try {
     const r = await pool.query("SELECT video FROM products WHERE id = $1", [req.params.productId]);
     if (!r.rows.length) return err(res, 404, "Not found");
-    if (r.rows[0].video) try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(r.rows[0].video))); } catch(e){}
+    await s3Delete(keyFromUrl(r.rows[0].video));
     await pool.query("UPDATE products SET video = NULL WHERE id = $1", [req.params.productId]);
     json(res, { ok: true });
   } catch(e) { err(res, 500, e.message); }
