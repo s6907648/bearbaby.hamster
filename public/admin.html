@@ -306,9 +306,8 @@
             <span id="imgPlaceholder">📷</span>
             <button class="upload-del" id="imgDel" style="display:none" onclick="delImage()">✕</button>
           </div>
-          <label class="upload-btn" id="imgUploadLabel">
+          <label class="upload-btn" id="imgUploadLabel" for="imgInput">
             點擊上傳圖片<br><span style="font-size:11px;color:var(--sub)">JPG / PNG / WEBP / GIF</span>
-            <input type="file" accept="image/*" style="display:none" id="imgInput" onchange="handleImgUpload(this)">
           </label>
         </div>
       </div>
@@ -321,9 +320,8 @@
             <span id="vidPlaceholder">🎬</span>
             <button class="upload-del" id="vidDel" style="display:none" onclick="delVideo()">✕</button>
           </div>
-          <label class="upload-btn" id="vidUploadLabel">
+          <label class="upload-btn" id="vidUploadLabel" for="vidInput">
             點擊上傳影片<br><span style="font-size:11px;color:var(--sub)">MP4 / MOV / WEBM</span>
-            <input type="file" accept="video/*" style="display:none" id="vidInput" onchange="handleVidUpload(this)">
           </label>
         </div>
       </div>
@@ -623,6 +621,7 @@ function renderTable() {
           <td class="action-cell">
             <button class="act-btn edit" onclick="editProduct('${p.id}')">✏️</button>
             <button class="act-btn upload" onclick="triggerUpload('${p.id}')">📷</button>
+            <button class="act-btn upload" onclick="triggerVidUpload('${p.id}')">🎬</button>
             ${confirmBtn}
             <button class="act-btn delete" onclick="deleteProduct('${p.id}')" title="刪除">🗑</button>
           </td>
@@ -751,6 +750,7 @@ async function deleteProduct(id) {
 
 // ── 上傳 ───────────────────────────────────────────────
 function triggerUpload(id) { uploadTargetId = id; document.getElementById('imgInput').click(); }
+function triggerVidUpload(id) { uploadTargetId = id; document.getElementById('vidInput').click(); }
 
 async function handleImgUpload(input) {
   if (!input.files[0]) return;
@@ -848,5 +848,9 @@ loadAll();
 startPoll();
 if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
 </script>
+
+<!-- 上傳 input（置於 body 層級，避免被隱藏彈窗影響） -->
+<input type="file" accept="image/*" style="display:none" id="imgInput" onchange="handleImgUpload(this)">
+<input type="file" accept="video/*" style="display:none" id="vidInput" onchange="handleVidUpload(this)">
 </body>
 </html>
