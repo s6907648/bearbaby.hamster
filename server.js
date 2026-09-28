@@ -20,7 +20,7 @@ const BUCKET = process.env.S3_BUCKET || "hamster-uploads";
 const PUBLIC_BASE = (process.env.AWS_ENDPOINT_URL_S3 || "").replace(/\/$/, "");
 async function s3Upload(key, buffer, contentType) {
   await S3.send(new PutObjectCommand({
-    Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType,
+    Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType, ACL: "public-read",
   }));
   return `${PUBLIC_BASE}/${BUCKET}/${key}`;
 }
