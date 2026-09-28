@@ -6,7 +6,7 @@ const fs      = require("fs");
 const { Pool } = require("pg");
 
 // ── Neon Object Storage (S3) ─────────────────────────
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, PutBucketPolicyCommand } = require("@aws-sdk/client-s3");
 const S3 = new S3Client({
   region: process.env.AWS_REGION || "us-east-2",
   endpoint: process.env.AWS_ENDPOINT_URL_S3,
@@ -20,10 +20,30 @@ const BUCKET = process.env.S3_BUCKET || "hamster-uploads";
 const PUBLIC_BASE = (process.env.AWS_ENDPOINT_URL_S3 || "").replace(/\/$/, "");
 async function s3Upload(key, buffer, contentType) {
   await S3.send(new PutObjectCommand({
-    Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType, ACL: "public-read",
+    Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType,
   }));
   return `${PUBLIC_BASE}/${BUCKET}/${key}`;
 }
+
+async function setBucketPublicRead() {
+  const policy = {
+    Version: "2012-10-17",
+    Statement: [{
+      Sid: "PublicRead",
+      Effect: "Allow",
+      Principal: "*",
+      Action: "s3:GetObject",
+      Resource: `arn:aws:s3:::${BUCKET}/*`
+    }]
+  };
+  try {
+    await S3.send(new PutBucketPolicyCommand({ Bucket: BUCKET, Policy: JSON.stringify(policy) }));
+    console.log('[S3] bucket policy set to public-read');
+  } catch(e) {
+    console.warn('[S3] bucket policy failed:', e.message);
+  }
+}
+
 async function s3Delete(key) {
   if (!key) return;
   try { await S3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key })); } catch(e){}
@@ -328,6 +348,9 @@ const PORT = process.env.PORT || 3000;
       console.log('[DB] Connected & ready');
     } else {
       console.log('[DB] DATABASE_URL not set, will run with empty data');
+    }
+    if (process.env.AWS_ENDPOINT_URL_S3) {
+      await setBucketPublicRead();
     }
   } catch(e) {
     console.error('[DB] Init failed:', e.message);
