@@ -231,9 +231,48 @@
     }
     .notify-banner.show { display: block; animation: fadeIn 0.3s; }
     .notify-banner strong { color: var(--amber); }
-  </style>
+      /* ── Login Overlay ── */
+    .login-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(74,55,40,0.85); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-overlay.show { display: flex; }
+    .login-box {
+      background: var(--card); border-radius: var(--radius); width: 100%; max-width: 340px;
+      padding: 32px 28px; box-shadow: var(--shadow-lg); text-align: center;
+    }
+    .login-box .logo { font-size: 46px; margin-bottom: 6px; }
+    .login-box h2 { font-size: 20px; margin-bottom: 4px; }
+    .login-box p { font-size: 13px; color: var(--sub); margin-bottom: 20px; }
+    .login-box input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 15px; background: var(--bg);
+      color: var(--text); text-align: center; margin-bottom: 14px;
+      font-family: inherit;
+    }
+    .login-box input:focus { outline: none; border-color: var(--primary); }
+    .login-box button {
+      width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm);
+      background: var(--primary); color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .login-box button:active { background: var(--primary-dark); }
+</style>
 </head>
 <body>
+
+<!-- 登入遮罩 -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="logo">🐹</div>
+    <h2>倉鼠小窩 後台</h2>
+    <p>請輸入管理密碼</p>
+    <input type="password" id="loginPw" placeholder="管理密碼" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">登入</button>
+  </div>
+</div>
+
 
 <!-- 通知橫幅 -->
 <div class="notify-banner" id="notifyBanner"></div>
@@ -248,6 +287,7 @@
     </div>
     <button class="btn-icon" onclick="showTab('shop')" title="店鋪設定">⚙️</button>
     <button class="btn-icon" onclick="addProduct()" title="新增商品" style="background:var(--accent)">➕</button>
+    <button class="btn-icon" onclick="doLogout()" title="登出">🔓</button>
   </div>
 </div>
 
@@ -408,6 +448,34 @@ const STATUS = { ON_SALE: 0, PENDING: 1, SOLD: 2 };
 const STATUS_LABEL = ['上架中', '待確認', '已完售'];
 const STATUS_CLS   = ['s0','s1','s2'];
 
+// ── 後台登入 ─────────────────────────────────────────
+const realFetch = window['fetch'].bind(window);
+async function api(url, opts) {
+  const r = await realFetch(url, opts);
+  if (r.status === 401) { showLogin(); throw new Error('auth'); }
+  return r;
+}
+function showLogin() { try { localStorage.removeItem('adminLoggedIn'); } catch(e){} document.getElementById('loginOverlay').classList.add('show'); }
+function hideLogin() { document.getElementById('loginOverlay').classList.remove('show'); }
+async function doLogin() {
+  const pw = document.getElementById('loginPw').value;
+  try {
+    const r = await realFetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+    if (r.ok) {
+      try { localStorage.setItem('adminLoggedIn', '1'); } catch(e){}
+      document.getElementById('loginPw').value = '';
+      hideLogin();
+      toast('✅ 已登入');
+      loadAll();
+    } else { toast('❌ 密碼錯誤'); }
+  } catch(e) { toast('❌ 登入失敗'); }
+}
+function doLogout() {
+  realFetch('/api/logout', { method: 'POST' }).catch(function(){});
+  showLogin();
+}
+
+
 // ── 狀態 ───────────────────────────────────────────────
 let products = [];
 let currentFilter = 'all';
@@ -420,7 +488,7 @@ function startPoll() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const r = await fetch('/api/products');
+      const r = await api('/api/products');
       if (!r.ok) return;
       const newProducts = await r.json();
 
@@ -489,8 +557,8 @@ function toast(msg) {
 // ── 載入 ───────────────────────────────────────────────
 async function loadAll() {
   const [pr, sr] = await Promise.all([
-    fetch('/api/products').then(r => r.json()),
-    fetch('/api/shop').then(r => r.json()).catch(() => ({}))
+    api('/api/products').then(r => r.json()),
+    api('/api/shop').then(r => r.json()).catch(() => ({}))
   ]);
   products = pr;
   renderFilters();
@@ -540,7 +608,7 @@ function showTab(tab) {
     statsEl.style.display = 'none';
     tblWrap.style.display = 'none';
     shopEl.style.display = 'block';
-    fetch('/api/shop').then(r=>r.json()).then(loadShopFields);
+    api('/api/shop').then(r=>r.json()).then(loadShopFields);
   } else if (tab === 'notify') {
     currentFilter = 'pending';
     renderFilters();
@@ -634,7 +702,7 @@ function renderTable() {
 // ── 狀態變更 ───────────────────────────────────────────
 async function changeStatus(id, newStatus) {
   try {
-    const r = await fetch('/api/products/' + id + '/status', {
+    const r = await api('/api/products/' + id + '/status', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
@@ -696,7 +764,7 @@ async function saveProduct() {
   const status = parseInt(document.getElementById('eStatus').value);
   if (!name) { toast('請填寫商品名稱'); return; }
   try {
-    const r = await fetch('/api/products/' + id, {
+    const r = await api('/api/products/' + id, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, category, price, status })
@@ -725,7 +793,7 @@ async function doAddProduct() {
   const price = parseInt(document.getElementById('aPrice').value) || 0;
   if (!name) { toast('請填寫商品名稱'); return; }
   try {
-    const r = await fetch('/api/products', {
+    const r = await api('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, category, price })
@@ -742,7 +810,7 @@ async function doAddProduct() {
 async function deleteProduct(id) {
   if (!confirm('確定要刪除這個商品嗎？')) return;
   try {
-    const r = await fetch('/api/products/' + id, { method: 'DELETE' });
+    const r = await api('/api/products/' + id, { method: 'DELETE' });
     if (r.ok) { toast('✅ 已刪除'); await loadAll(); }
     else { toast('❌ 刪除失敗'); }
   } catch(e) { toast('❌ 網路錯誤'); }
@@ -771,7 +839,7 @@ async function uploadFile(file, url, type) {
   const form = new FormData();
   form.append('file', file);
   try {
-    const r = await fetch(url, { method: 'POST', body: form });
+    const r = await api(url, { method: 'POST', body: form });
     if (r.ok) {
       toast('✅ 上傳成功');
       await loadAll();
@@ -791,7 +859,7 @@ async function uploadFile(file, url, type) {
 async function delImage() {
   if (!editingId) return;
   try {
-    const r = await fetch('/api/upload/image/' + editingId, { method: 'DELETE' });
+    const r = await api('/api/upload/image/' + editingId, { method: 'DELETE' });
     if (r.ok) {
       toast('✅ 圖片已刪除');
       document.getElementById('imgPreview').innerHTML = '<span id="imgPlaceholder">📷</span><button class="upload-del" id="imgDel" style="display:none" onclick="delImage()">✕</button>';
@@ -801,7 +869,7 @@ async function delImage() {
 async function delVideo() {
   if (!editingId) return;
   try {
-    const r = await fetch('/api/upload/video/' + editingId, { method: 'DELETE' });
+    const r = await api('/api/upload/video/' + editingId, { method: 'DELETE' });
     if (r.ok) {
       toast('✅ 影片已刪除');
       document.getElementById('vidPreview').innerHTML = '<span id="vidPlaceholder">🎬</span><button class="upload-del" id="vidDel" style="display:none" onclick="delVideo()">✕</button>';
@@ -829,7 +897,7 @@ async function saveShop() {
     note:       document.getElementById('sNote').value,
   };
   try {
-    const r = await fetch('/api/shop', {
+    const r = await api('/api/shop', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -844,6 +912,7 @@ function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
 // ── 啟動 ──────────────────────────────────────────────
+if (localStorage.getItem('adminLoggedIn') !== '1') showLogin();
 loadAll();
 startPoll();
 if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();

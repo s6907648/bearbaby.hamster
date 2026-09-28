@@ -37,6 +37,17 @@ function keyFromUrl(url) {
   catch(e) { return null; }
 }
 
+// ── 後台密碼保護 ─────────────────────────────────────
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+function requireAuth(req, res, next) {
+  if (!ADMIN_PASSWORD) return next(); // 未設密碼則保持開放
+  const cookies = req.headers.cookie || "";
+  const m = cookies.match(/(?:^|;\s*)admin_token=([^;]+)/);
+  if (m && m[1] === ADMIN_PASSWORD) return next();
+  if (req.headers["x-admin-token"] === ADMIN_PASSWORD) return next();
+  return res.status(401).json({ error: "請先登入後台" });
+}
+
 // ── Telegram 通知 ────────────────────────────────────
 const TELEGRAM_BOT_TOKEN = "7407012813:AAH3w5tYgtdvKJZvsT1R8AKulzme4Id9LvY";
 const TELEGRAM_CHAT_ID   = "7088717749";
@@ -150,6 +161,19 @@ app.use((req, res, next) => {
 app.get("/",  (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
+// 後台登入 / 登出
+app.post("/api/login", (req, res) => {
+  const pw = (req.body && req.body.password) || "";
+  if (!ADMIN_PASSWORD) return res.json({ ok: true });
+  if (pw !== ADMIN_PASSWORD) return res.status(401).json({ error: "密碼錯誤" });
+  res.setHeader("Set-Cookie", `admin_token=${ADMIN_PASSWORD}; Path=/; Max-Age=86400; SameSite=Lax; Secure`);
+  res.json({ ok: true });
+});
+app.post("/api/logout", (req, res) => {
+  res.setHeader("Set-Cookie", `admin_token=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
+  res.json({ ok: true });
+});
+
 app.get("/api/events", (req, res) => {
   res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
   res.flushHeaders();
@@ -177,7 +201,7 @@ app.get("/api/products/:id", async (req, res) => {
   } catch(e) { err(res, 500, e.message); }
 });
 
-app.post("/api/products", async (req, res) => {
+app.post("/api/products", requireAuth, async (req, res) => {
   try {
     const { category, name, description = "", price = 0, sort_order = 0 } = req.body;
     if (!name || !category) return err(res, 400, "name & category required");
@@ -193,7 +217,7 @@ app.post("/api/products", async (req, res) => {
   } catch(e) { err(res, 500, e.message); }
 });
 
-app.put("/api/products/:id", async (req, res) => {
+app.put("/api/products/:id", requireAuth, async (req, res) => {
   try {
     const { name, description, price, category, status, sort_order } = req.body;
     const cur = await pool.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
@@ -234,7 +258,7 @@ app.patch("/api/products/:id/status", async (req, res) => {
   } catch(e) { err(res, 500, e.message); }
 });
 
-app.delete("/api/products/:id", async (req, res) => {
+app.delete("/api/products/:id", requireAuth, async (req, res) => {
   try {
     const r = await pool.query("SELECT * FROM products WHERE id = $1", [req.params.id]);
     if (!r.rows.length) return err(res, 404, "Not found");
@@ -271,10 +295,10 @@ function doUpload(field) {
   };
 }
 
-app.post("/api/upload/image/:productId", upload.single("file"), doUpload("image"));
-app.post("/api/upload/video/:productId", upload.single("file"), doUpload("video"));
+app.post("/api/upload/image/:productId", requireAuth, upload.single("file"), doUpload("image"));
+app.post("/api/upload/video/:productId", requireAuth, upload.single("file"), doUpload("video"));
 
-app.delete("/api/upload/image/:productId", async (req, res) => {
+app.delete("/api/upload/image/:productId", requireAuth, async (req, res) => {
   try {
     const r = await pool.query("SELECT image FROM products WHERE id = $1", [req.params.productId]);
     if (!r.rows.length) return err(res, 404, "Not found");
@@ -284,7 +308,7 @@ app.delete("/api/upload/image/:productId", async (req, res) => {
   } catch(e) { err(res, 500, e.message); }
 });
 
-app.delete("/api/upload/video/:productId", async (req, res) => {
+app.delete("/api/upload/video/:productId", requireAuth, async (req, res) => {
   try {
     const r = await pool.query("SELECT video FROM products WHERE id = $1", [req.params.productId]);
     if (!r.rows.length) return err(res, 404, "Not found");
@@ -302,7 +326,7 @@ app.get("/api/shop", async (req, res) => {
   } catch(e) { err(res, 500, e.message); }
 });
 
-app.put("/api/shop", async (req, res) => {
+app.put("/api/shop", requireAuth, async (req, res) => {
   try {
     const { shop_name, logo_emoji, intro, bank_code, bank_name, account, note } = req.body;
     await pool.query(
