@@ -694,7 +694,6 @@ async function saveProduct() {
   const name = document.getElementById('eName').value.trim();
   const category = document.getElementById('eCategory').value;
   const price = parseInt(document.getElementById('ePrice').value) || 0;
-  const description = document.getElementById('eDesc').value.trim();
   const status = parseInt(document.getElementById('eStatus').value);
   if (!name) { toast('請填寫商品名稱'); return; }
   try {
@@ -721,17 +720,16 @@ function addProduct() {
 }
 function closeAdd() { closeModal('addModal'); }
 
-async function doAddProduct() {
+async async function doAddProduct() {
   const name = document.getElementById('aName').value.trim();
   const category = document.getElementById('aCategory').value;
   const price = parseInt(document.getElementById('aPrice').value) || 0;
-  const description = document.getElementById('aDesc').value.trim();
   if (!name) { toast('請填寫商品名稱'); return; }
   try {
     const r = await fetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, description })
+      body: JSON.stringify({ name, category, price })
     });
     if (r.ok) {
       toast('✅ 商品已新增');
