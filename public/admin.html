@@ -720,7 +720,7 @@ function addProduct() {
 }
 function closeAdd() { closeModal('addModal'); }
 
-async async function doAddProduct() {
+async function doAddProduct() {
   const name = document.getElementById('aName').value.trim();
   const category = document.getElementById('aCategory').value;
   const price = parseInt(document.getElementById('aPrice').value) || 0;
